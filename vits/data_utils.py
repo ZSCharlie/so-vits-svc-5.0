@@ -87,7 +87,7 @@ class TextAudioSpeakerSet(torch.utils.data.Dataset):
         spk = torch.FloatTensor(spk)
 
         len_pit = pit.size()[0]
-        len_ppg = ppg.size()[0]
+        len_ppg = ppg.size()[0] - 2 # for safe
         len_min = min(len_pit, len_ppg)
         len_wav = len_min * self.hop_length
 

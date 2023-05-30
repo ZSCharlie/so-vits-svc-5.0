@@ -7,9 +7,9 @@ train:
   lr_decay: 0.999875
   eps: 1e-9
   batch_size: 8
-  c_stft: 5
-  c_mel: 2.5
-  c_kl: 1.0
+  c_stft: 9
+  c_mel: 1.
+  c_kl: 0.2
   port: 8001
   pretrain: ""
 #############################
@@ -22,8 +22,8 @@ data:
   filter_length: 2048
   hop_length: 480
   win_length: 2048
-  mel_channels: 80
-  mel_fmin: 0.0
+  mel_channels: 100
+  mel_fmin: 50.0
   mel_fmax: 24000.0
 #############################
 vits:

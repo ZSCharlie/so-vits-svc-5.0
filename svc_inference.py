@@ -16,7 +16,11 @@ def load_svc_model(checkpoint_path, model):
     state_dict = model.state_dict()
     new_state_dict = {}
     for k, v in state_dict.items():
-        new_state_dict[k] = saved_state_dict[k]
+        try:
+            new_state_dict[k] = saved_state_dict[k]
+        except:
+            print("%s is not in the checkpoint" % k)
+            new_state_dict[k] = v
     model.load_state_dict(new_state_dict)
     return model
 
@@ -52,24 +56,18 @@ def main(args):
     ppg = torch.FloatTensor(ppg)
 
     pit = load_csv_pitch(args.pit)
-    if (args.statics == None):
-        print("don't use pitch shift")
+    print("pitch shift: ", args.shift)
+    if (args.shift == 0):
+        pass
     else:
+        pit = np.array(pit)
         source = pit[pit > 0]
         source_ave = source.mean()
         source_min = source.min()
         source_max = source.max()
         print(f"source pitch statics: mean={source_ave:0.1f}, \
                 min={source_min:0.1f}, max={source_max:0.1f}")
-        singer_ave, singer_min, singer_max = np.load(args.statics)
-        print(f"singer pitch statics: mean={singer_ave:0.1f}, \
-                min={singer_min:0.1f}, max={singer_max:0.1f}")
-
-        shift = np.log2(singer_ave/source_ave) * 12
-        if (singer_ave >= source_ave):
-            shift = np.floor(shift)
-        else:
-            shift = np.ceil(shift)
+        shift = args.shift
         shift = 2 ** (shift / 12)
         pit = pit * shift
 
@@ -101,17 +99,17 @@ def main(args):
             has_audio = True
             if (out_index == 0):  # start frame
                 cut_s = 0
-                cut_s_48k = 0
+                cut_s_out = 0
             else:
                 cut_s = out_index - hop_frame
-                cut_s_48k = hop_frame * hop_size
+                cut_s_out = hop_frame * hop_size
 
             if (out_index + out_chunk + hop_frame > all_frame):  # end frame
                 cut_e = out_index + out_chunk
-                cut_e_48k = 0
+                cut_e_out = 0
             else:
                 cut_e = out_index + out_chunk + hop_frame
-                cut_e_48k = -1 * hop_frame * hop_size
+                cut_e_out = -1 * hop_frame * hop_size
 
             sub_ppg = ppg[cut_s:cut_e, :].unsqueeze(0).to(device)
             sub_pit = pit[cut_s:cut_e].unsqueeze(0).to(device)
@@ -121,17 +119,17 @@ def main(args):
             sub_out = model.inference(sub_ppg, sub_pit, spk, sub_len, sub_har)
             sub_out = sub_out[0, 0].data.cpu().detach().numpy()
 
-            sub_out = sub_out[cut_s_48k:cut_e_48k]
+            sub_out = sub_out[cut_s_out:cut_e_out]
             out_audio.extend(sub_out)
             out_index = out_index + out_chunk
 
         if (out_index < all_frame):
             if (has_audio):
                 cut_s = out_index - hop_frame
-                cut_s_48k = hop_frame * hop_size
+                cut_s_out = hop_frame * hop_size
             else:
                 cut_s = 0
-                cut_s_48k = 0
+                cut_s_out = 0
             sub_ppg = ppg[cut_s:, :].unsqueeze(0).to(device)
             sub_pit = pit[cut_s:].unsqueeze(0).to(device)
             sub_len = torch.LongTensor([all_frame - cut_s]).to(device)
@@ -139,7 +137,7 @@ def main(args):
             sub_out = model.inference(sub_ppg, sub_pit, spk, sub_len, sub_har)
             sub_out = sub_out[0, 0].data.cpu().detach().numpy()
 
-            sub_out = sub_out[cut_s_48k:]
+            sub_out = sub_out[cut_s_out:]
             out_audio.extend(sub_out)
         out_audio = np.asarray(out_audio)
 
@@ -160,8 +158,8 @@ if __name__ == '__main__':
                         help="Path of content vector.")
     parser.add_argument('--pit', type=str,
                         help="Path of pitch csv file.")
-    parser.add_argument('--statics', type=str,
-                        help="Path of pitch statics.")
+    parser.add_argument('--shift', type=int, default=0,
+                        help="Pitch shift key.")
     args = parser.parse_args()
 
     main(args)
