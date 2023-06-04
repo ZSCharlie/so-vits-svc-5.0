@@ -27,8 +27,6 @@
 
 - 【用 Excel】进行原始调教，纯手工
 
-本项目并不基于svc-develop-team/so-vits-svc，恰恰相反，见https://github.com/svc-develop-team/so-vits-svc/tree/2.0
-
 ## 本分支，只是48K参数实例，并未正在训练过~~~
 
 | Feature | From | Status | Function | Remarks |
